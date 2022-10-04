@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        html {
+            box-sizing: border-box;
+        }
+
+        *, *:before, *:after {
+            box-sizing: inherit;
+        }
+
+        body {
+            margin: 0;
+            background-color: #121212;
+            font-family: sans-serif;
+        }
+        
+        .header {
+            background-color: #333;
+            text-align: center;
+            color: #fff;
+            padding: 16px;
+            border-radius: 4px;
+        }
+
+        .calculator {
+            background-color: #fff;
+            margin: 40px auto;
+            max-width: 400px;
+            padding: 16px;
+            border-radius: 4px;            
+        }
+
+        .display {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1.2em;
+        }
+
+        .keyboard {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-gap: 16px;
+            font-size: 1.2em;
+            margin-top: 16px;
+        }
+
+        button {
+            border: 0;
+            border-radius: 4px;
+            background-color: #efefef;
+            padding: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button.span2 {
+            grid-column: span 2;
+        }
+
+        button.primary {
+            background-color: #ffeec2;
+            color: #c49023;
+        }
+
+        .error {
+            color: red;
+        }
+
+        .history {
+            padding: 0 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            height: 100px;
+            overflow-y: scroll;
+            margin-bottom: 8px;
+            text-align: right;
+        }
+    </style>
+    <title>Calculadora - React Profissional</title>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script crossorigin src="https://unpkg.com/react@16/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script type="text/babel">
+        const calcRegex = /^([0-9]|-|\+|\*|\/|\.)*$/;
+        
+        const keyboard = [
+                7,8,9,"/","C",
+                4,5,6,"*","Del",
+                1,2,3,"-","Ad",
+                0,".","+","="
+            ];
+        const advancedKeys = [
+            "(",")","Hist","Up","AC"
+        ];
+        
+        const Header = () => <div className="header">Calculadora</div>;
+
+        const Button = ({ value, onClick, className }) => (
+            <button    
+                onClick={() => {
+                    onClick(value);
+                }}
+                className={className}
+            >
+                {value}
+            </button>
+        );          
+
+        const Calculator = () => {
+            const [display, setDisplay] = React.useState(""); 
+            const [error, setError] = React.useState();
+            const [showAd, toggleAd] = React.useState(true);
+            const [history, setHistory] = React.useState([]);
+            const [showHist, toggleHist] = React.useState(true);
+            const histRef = React.useRef();
+
+
+            React.useEffect(() => {
+                if (error) {
+                    setError();
+                }
+            }, [display]);
+
+            React.useEffect(() => {
+                if (history.length > 2 && showHist) {
+                histRef.current.scrollTop =
+                    histRef.current.scrollHeight;
+                }
+            }, [history.length, showHist]);
+
+            const doTheMath = () => {
+                try {
+                    const result = eval(display);
+                    setHistory([].concat(history, {
+                       calculation: display,
+                       result
+                    }));
+                    setDisplay(`${result}`);
+                } catch (err) {
+                    setError(`Invalid expression: ${err.message}`);
+                }
+            }
+
+            const handleClick = (value) => {
+                switch (value) {
+                    case "=":
+                        doTheMath();
+                        break;
+                    case "C":
+                        setDisplay("");
+                        break;
+                    case "Del":  
+                        setDisplay(
+                            display.substring(0, display.length - 1)
+                        );
+                        break;
+                    case "Ad":
+                        toggleAd(!showAd);
+                        toggleHist(false);
+                        break;
+                    case "Hist":
+                        toggleHist(!showHist);
+                        break;
+                    case "AC":
+                        setDisplay("");
+                        setHistory([]);
+                        break;
+                    case "Up":
+                        const lastIndex = history.length -1;
+                        if (lastIndex > -1) {
+                            const newDisplay = history[lastIndex].calculation;
+                            const newHistory = history.slice(0, lastIndex);
+                            setDisplay(newDisplay);
+                            setHistory(newHistory);
+                        }
+                        break;
+                    default:
+                        setDisplay(`${display}${value}`);
+                }
+            }
+            const buildButtonKey = value => {
+                const span2Class = value === 0 ? "span2" : "";
+                const primaryClass = isNaN(value) ? "primary" : "";
+                return (
+                    <Button 
+                        key={value}
+                        value={value}
+                        onClick={handleClick}
+                        className={`${span2Class} ${primaryClass}`}
+                    />
+                );
+            }; 
+
+            return (
+                <div className="calculator">
+                    {showHist && (
+                        <div ref={histRef} className="history">
+                            {history.map(({ calculation, result }, index) => (
+                                <p key={index}>{`${calculation} = ${result}`}</p>
+                            ))}
+                        </div>
+                    )}
+                    <input
+                        type="text"
+                        className="display"
+                        value={display}
+                        onChange={event => {
+                            const { value } = event.target;
+
+                            if (calcRegex.test(value)) {
+                                setDisplay(event.target.value);
+                            }
+                        }}
+                        onKeyPress={event => {
+                            if (event.key === 'Enter') {
+                                doTheMath();
+                            } else if (event.key.toLowerCase() === 'c') {
+                                setDisplay('');
+                            }
+                        }}
+                    />
+                    {error && (
+                        <p className="error">{error}</p>
+                    )}
+                    {showAd && (
+                        <div className="keyboard">
+                            {advancedKeys.map(buildButtonKey)}
+                        </div>
+                    )}
+                    <div className="keyboard">
+                        {keyboard.map(buildButtonKey)}
+                    </div>
+                </div>
+            );
+        }
+
+        const App = () => (
+            <div>
+                <Header />
+                <Calculator />
+            </div>  
+        );
+
+    ReactDOM.render(
+        <App />,
+        document.getElementById("root")
+    );
+    </script>
+</body>
+</html>
